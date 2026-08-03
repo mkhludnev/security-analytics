@@ -4,11 +4,10 @@
  */
 package org.opensearch.securityanalytics.rules.types;
 
+import com.google.common.net.InetAddresses;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
 
 import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,11 +65,10 @@ public class SigmaCIDRExpression implements SigmaType {
         }
 
         try {
-            InetAddress addr = InetAddress.getByName(ipPart);
-            if (!(addr instanceof Inet6Address)) {
+            if (!(InetAddresses.forString(ipPart) instanceof Inet6Address)) {
                 return false;
             }
-        } catch (UnknownHostException e) {
+        } catch (IllegalArgumentException e) {
             return false;
         }
 
