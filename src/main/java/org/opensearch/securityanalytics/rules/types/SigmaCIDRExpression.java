@@ -6,6 +6,9 @@ package org.opensearch.securityanalytics.rules.types;
 
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,8 +18,8 @@ public class SigmaCIDRExpression implements SigmaType {
     public SigmaCIDRExpression(String cidr) throws SigmaTypeError {
         this.cidr = cidr;
 
-        if (!isIPv4AddressValid(this.cidr)) {
-            throw new SigmaTypeError("Invalid IPv4 CIDR expression");
+        if (!isIPv4AddressValid(this.cidr) && !isIPv6AddressValid(this.cidr)) {
+            throw new SigmaTypeError("Invalid CIDR expression");
         }
     }
 
@@ -37,8 +40,47 @@ public class SigmaCIDRExpression implements SigmaType {
             return false;
         }
         if (values.length >= 2) {
-            int prefix = Integer.parseInt(values[1]);
-            if ((prefix < 0) || (prefix > 32)) {
+            try {
+                int prefix = Integer.parseInt(values[1]);
+                if ((prefix < 0) || (prefix > 32)) {
+                    return false;
+                }
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isIPv6AddressValid(String cidr) {
+        if (cidr == null) {
+            return false;
+        }
+
+        // IPv6 addresses with a zone ID (e.g. fe80::1%eth0) are not valid CIDR notation
+        int slashIndex = cidr.indexOf('/');
+        String ipPart = slashIndex >= 0 ? cidr.substring(0, slashIndex) : cidr;
+
+        if (!ipPart.contains(":")) {
+            return false;
+        }
+
+        try {
+            InetAddress addr = InetAddress.getByName(ipPart);
+            if (!(addr instanceof Inet6Address)) {
+                return false;
+            }
+        } catch (UnknownHostException e) {
+            return false;
+        }
+
+        if (slashIndex >= 0) {
+            try {
+                int prefix = Integer.parseInt(cidr.substring(slashIndex + 1));
+                if ((prefix < 0) || (prefix > 128)) {
+                    return false;
+                }
+            } catch (NumberFormatException e) {
                 return false;
             }
         }
