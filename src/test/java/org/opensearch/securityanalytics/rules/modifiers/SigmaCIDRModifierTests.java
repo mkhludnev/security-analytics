@@ -54,6 +54,21 @@ public class SigmaCIDRModifierTests extends SigmaModifierTests {
         assertTrue(actualMessage.contains(expectedMessage));
     }
 
+    public void testCidrIPv4TrailingSlash() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.0/"))));
+    }
+
+    public void testCidrIPv6TrailingSlash() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/"))));
+    }
+
+    public void testCidrEmptyString() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString(""))));
+    }
+
     public void testCidrWithOther() {
         Exception exception = assertThrows(SigmaValueError.class, () -> {
             new SigmaCIDRModifier(dummyDetectionItem(), List.of(SigmaBase64Modifier.class)).apply(Either.left(new SigmaString("192.168.1.0/24")));

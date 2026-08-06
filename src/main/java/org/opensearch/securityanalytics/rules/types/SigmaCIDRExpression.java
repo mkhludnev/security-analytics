@@ -32,6 +32,9 @@ public class SigmaCIDRExpression implements SigmaType {
         }
 
         String[] values = cidr.split("/");
+        if (values.length == 0) {
+            return false;
+        }
         Pattern ipv4Pattern = Pattern
                 .compile("(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])");
         Matcher mm = ipv4Pattern.matcher(values[0]);
@@ -39,6 +42,9 @@ public class SigmaCIDRExpression implements SigmaType {
             return false;
         }
         if (values.length >= 2) {
+            if (values[1].isEmpty()) {
+                return false;
+            }
             try {
                 int prefix = Integer.parseInt(values[1]);
                 if ((prefix < 0) || (prefix > 32)) {
@@ -73,8 +79,12 @@ public class SigmaCIDRExpression implements SigmaType {
         }
 
         if (slashIndex >= 0) {
+            String prefixStr = cidr.substring(slashIndex + 1);
+            if (prefixStr.isEmpty()) {
+                return false;
+            }
             try {
-                int prefix = Integer.parseInt(cidr.substring(slashIndex + 1));
+                int prefix = Integer.parseInt(prefixStr);
                 if ((prefix < 0) || (prefix > 128)) {
                     return false;
                 }
