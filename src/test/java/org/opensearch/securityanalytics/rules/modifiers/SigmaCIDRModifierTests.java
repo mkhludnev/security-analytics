@@ -37,28 +37,56 @@ public class SigmaCIDRModifierTests extends SigmaModifierTests {
         Assert.assertEquals("2001:db8::/32", ((SigmaCIDRExpression) values.get(0)).getCidr());
     }
 
-    public void testCidrIPv6NoPrefix() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
-        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::1")));
+    public void testCidrIPv6Loopback() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("::1/128")));
         Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
-        Assert.assertEquals("2001:db8::1", ((SigmaCIDRExpression) values.get(0)).getCidr());
+        Assert.assertEquals("::1/128", ((SigmaCIDRExpression) values.get(0)).getCidr());
+    }
+
+    public void testCidrIPv6NoPrefix() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("fe80::1")));
+        Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
+        Assert.assertEquals("fe80::1", ((SigmaCIDRExpression) values.get(0)).getCidr());
+    }
+
+    public void testCidrIPv6InvalidPrefix() {
+        Exception exception = assertThrows(SigmaTypeError.class, () -> {
+            new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/129")));
+        });
+
+        String expectedMessage = "Invalid CIDR expression";
+        String actualMessage = exception.getMessage();
+
+        assertTrue(actualMessage.contains(expectedMessage));
+    }
+
+    public void testCidrIPv4TrailingSlash() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.0/"))));
+    }
+
+    public void testCidrIPv6TrailingSlash() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/"))));
+    }
+
+    public void testCidrEmptyString() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString(""))));
     }
 
     public void testCidrRejectsSignedPrefix() {
         assertThrows(SigmaTypeError.class, () ->
-            new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.0/+24")))
-        );
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.0/+24"))));
         assertThrows(SigmaTypeError.class, () ->
-            new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/+32")))
-        );
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/+32"))));
     }
 
     public void testCidrRejectsWhitespaceInPrefix() {
         assertThrows(SigmaTypeError.class, () ->
-            new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.0/24 ")))
-        );
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.0/24 "))));
         assertThrows(SigmaTypeError.class, () ->
-            new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/ 32")))
-        );
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/ 32"))));
     }
 
     public void testCidrWithOther() {
